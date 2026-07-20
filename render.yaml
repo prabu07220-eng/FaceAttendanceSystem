@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: face-attendance-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DB_HOST
+        value: b7qvuwrkes3idbbzs52o-mysql.services.clever-cloud.com
+      - key: DB_USER
+        value: uhxyp3ooh8dyea1m
+      - key: DB_PASSWORD
+        value: u1T1ypwg5Fe8rrKTgVsy
+      - key: DB_NAME
+        value: b7qvuwrkes3idbbzs52o
+      - key: DB_PORT
+        value: "3306"

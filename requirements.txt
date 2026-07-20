@@ -1,0 +1,9 @@
+flask
+gunicorn
+mysql-connector-python
+numpy
+requests
+openpyxl
+mediapipe
+python-dotenv
+opencv-contrib-python-headless
