@@ -41,7 +41,7 @@ def serve_style_css():
             return send_from_directory(folder, 'style.css', mimetype='text/css')
     return "", 404
 
-@app.route('/static/<path:filename>')
+@app.route('/static/<path:filename>', endpoint='static')
 def custom_static(filename):
     from flask import send_from_directory
     for folder in [os.path.join(BASE_DIR, 'static'), BASE_DIR]:
