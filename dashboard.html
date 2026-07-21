@@ -45,7 +45,7 @@
                 <td>{{ name }}</td>
                 <td><span class="badge {{ 'student' if person_type=='Student' else 'staff' }}">{{ person_type }}</span></td>
                 <td>{{ department or "—" }}</td>
-                <td>{{ entry_time.strftime("%d %b, %I:%M %p") if entry_time else "—" }}</td>
+                <td>{{ entry_time.strftime("%d %b, %I:%M %p") if entry_time and hasattr(entry_time, 'strftime') else (entry_time or "—") }}</td>
             </tr>
             {% else %}
             <tr><td colspan="4" class="empty">No attendance recorded yet.</td></tr>
