@@ -32,11 +32,14 @@ DB_PORT = int(os.environ.get("DB_PORT", "3306"))
 def get_db_connection():
     """
     Returns a MySQL connection using parameters configured in the .env file.
+    Includes a 5-second connection timeout to prevent Gunicorn worker freezes.
     """
     return mysql.connector.connect(
         host=DB_HOST,
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,
-        port=DB_PORT
+        port=DB_PORT,
+        connection_timeout=5,
+        connect_timeout=5
     )

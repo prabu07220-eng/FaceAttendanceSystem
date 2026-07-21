@@ -49,6 +49,13 @@ def custom_static(filename):
             return send_from_directory(folder, filename)
     return "", 404
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    tb = traceback.format_exc()
+    print("SERIOUS SERVER ERROR:\n", tb)
+    return f"<h3>Server Debug Error</h3><pre>{tb}</pre>", 500
+
 # Secure persistent secret key generation
 SECRET_KEY_PATH = os.path.join(BASE_DIR, ".secret_key")
 if os.path.exists(SECRET_KEY_PATH):
@@ -84,24 +91,9 @@ TARGET_IMAGES = 100
 CAPTURE_DELAY = 0.15
 
 
+# Database helper function
 def get_db():
     return config.get_db_connection()
-
-
-# Ensure settings table exists on startup
-try:
-    _conn = get_db()
-    _cursor = _conn.cursor()
-    _cursor.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            `key` VARCHAR(255) PRIMARY KEY,
-            `value` TEXT
-        )
-    """)
-    _conn.commit()
-    _conn.close()
-except Exception as _e:
-    print(f"Error creating settings table on startup: {_e}")
 
 
 @app.context_processor
