@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">System Config</p>
+        <h1>Admin Settings</h1>
+    </div>
+</header>
+
+<section class="panel form-panel" style="max-width: 600px;">
+    <h2>AI Integration Settings</h2>
+    <p class="field-hint" style="margin-bottom: 20px;">Configure your AI Provider for the Admin Chatbot. You can choose cloud-based Gemini or 100% offline Ollama.</p>
+    
+    <form method="POST" action="{{ url_for('settings') }}" class="register-form">
+        <div class="form-row single">
+            <div>
+                <label>Enable AI Admin Chatbot</label>
+                <select name="ai_chat_enabled" required>
+                    <option value="true" {% if ai_chat_enabled == 'true' %}selected{% endif %}>Yes, show chatbot</option>
+                    <option value="false" {% if ai_chat_enabled == 'false' %}selected{% endif %}>No, hide chatbot</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>AI Provider</label>
+                <select name="llm_provider" id="llm_provider" required>
+                    <option value="gemini" {% if llm_provider == 'gemini' %}selected{% endif %}>Google Gemini API (Cloud)</option>
+                    <option value="ollama" {% if llm_provider == 'ollama' %}selected{% endif %}>Local Ollama (100% Offline)</option>
+                </select>
+            </div>
+            <div id="ollama_model_row">
+                <label>Ollama Model Name</label>
+                <input type="text" name="ollama_model" value="{{ ollama_model or 'qwen2.5-coder:1.5b' }}" placeholder="qwen2.5-coder:1.5b">
+            </div>
+        </div>
+        
+        <div class="form-row single" id="gemini_key_row">
+            <div>
+                <label>Google Gemini API Key</label>
+                <input type="password" name="gemini_api_key" value="{{ gemini_api_key or '' }}" placeholder="AIzaSy...">
+                <p class="field-hint">Required for cloud AI. Get a free key from Google AI Studio.</p>
+            </div>
+        </div>
+        
+        <button type="submit" class="primary-btn">Save Configurations</button>
+    </form>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const providerSelect = document.getElementById("llm_provider");
+    const geminiRow = document.getElementById("gemini_key_row");
+    const ollamaRow = document.getElementById("ollama_model_row");
+
+    function toggleFields() {
+        const val = providerSelect.value;
+        if (val === "gemini") {
+            geminiRow.style.display = "block";
+            ollamaRow.style.display = "none";
+        } else {
+            geminiRow.style.display = "none";
+            ollamaRow.style.display = "block";
+        }
+    }
+
+    providerSelect.addEventListener("change", toggleFields);
+    toggleFields(); // Init on load
+});
+</script>
+{% endblock %}

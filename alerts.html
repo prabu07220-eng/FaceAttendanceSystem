@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Security Alerts{% endblock %}
+{% block content %}
+<header class="page-header" style="margin-bottom: 24px;">
+    <div>
+        <p class="eyebrow">Security &amp; Monitoring</p>
+        <h1>Security Alerts</h1>
+    </div>
+</header>
+
+<!-- Alert Tabs Container -->
+<div class="tabs-container" style="background: white; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); padding: 20px;">
+    <div class="tab-headers" style="display: flex; gap: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px;">
+        <button class="tab-btn active" onclick="switchTab('unknown-tab', this)" style="background: none; border: none; font-size: 16px; font-weight: 600; color: #4f46e5; cursor: pointer; padding: 6px 12px; border-bottom: 2px solid #4f46e5; transition: all 0.2s ease;">
+            Unrecognized Faces ({{ unknown_rows|length }})
+        </button>
+        <button class="tab-btn" onclick="switchTab('spoof-tab', this)" style="background: none; border: none; font-size: 16px; font-weight: 600; color: #64748b; cursor: pointer; padding: 6px 12px; border-bottom: 2px solid transparent; transition: all 0.2s ease;">
+            Spoofing Attempts ({{ spoof_rows|length }})
+        </button>
+    </div>
+
+    <!-- Tab 1: Unknown Alerts -->
+    <div id="unknown-tab" class="tab-content" style="display: block;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-size: 18px; color: #0f172a; margin: 0;">Unrecognized Visitors</h2>
+            {% if unknown_rows %}
+            <form method="POST" action="{{ url_for('delete_all_alerts') }}" onsubmit="return confirm('Delete all unrecognized visitor alerts?');">
+                <button type="submit" class="secondary-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Clear All</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <section class="alert-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
+            {% for id, detected_time, image_path in unknown_rows %}
+            <div class="alert-card" style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; position: relative; transition: transform 0.2s ease;">
+                <img src="/{{ image_path }}" alt="Unknown face detected" style="width: 100%; height: 180px; object-fit: cover;">
+                <div class="alert-meta" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <span class="badge unknown" style="background: #fee2e2; color: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; width: fit-content;">Unrecognized</span>
+                    <span style="font-size: 12px; color: #64748b;">{{ detected_time.strftime("%d %b %Y, %I:%M %p") }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('delete_alert', alert_id=id) }}" onsubmit="return confirm('Delete this alert?');" style="padding: 0 12px 12px 12px;">
+                    <button type="submit" class="delete-btn" style="width: 100%; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 6px 0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="empty" style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px 0;">No unrecognized visitors detected yet.</p>
+            {% endfor %}
+        </section>
+    </div>
+
+    <!-- Tab 2: Spoof Alerts -->
+    <div id="spoof-tab" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-size: 18px; color: #0f172a; margin: 0;">Spoofing Detections</h2>
+            {% if spoof_rows %}
+            <form method="POST" action="{{ url_for('delete_all_spoofs') }}" onsubmit="return confirm('Delete all spoofing alert logs?');">
+                <button type="submit" class="secondary-btn" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Clear All</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <section class="alert-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
+            {% for id, detected_time, image_path in spoof_rows %}
+            <div class="alert-card" style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; position: relative; transition: transform 0.2s ease;">
+                <img src="/{{ image_path }}" alt="Spoofing attempt detected" style="width: 100%; height: 180px; object-fit: cover;">
+                <div class="alert-meta" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <span class="badge spoof" style="background: #ffedd5; color: #ea580c; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; width: fit-content;">Spoof Blocked</span>
+                    <span style="font-size: 12px; color: #64748b;">{{ detected_time.strftime("%d %b %Y, %I:%M %p") }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('delete_spoof', alert_id=id) }}" onsubmit="return confirm('Delete this alert?');" style="padding: 0 12px 12px 12px;">
+                    <button type="submit" class="delete-btn" style="width: 100%; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 6px 0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="empty" style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px 0;">No spoofing attempts blocked yet.</p>
+            {% endfor %}
+        </section>
+    </div>
+</div>
+
+<script>
+function switchTab(tabId, btnEl) {
+    // Hide all contents
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(c => c.style.display = 'none');
+    
+    // Deactivate all buttons
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => {
+        b.style.color = '#64748b';
+        b.style.borderBottomColor = 'transparent';
+    });
+
+    // Show current tab
+    document.getElementById(tabId).style.display = 'block';
+    
+    // Activate clicked button
+    btnEl.style.color = '#4f46e5';
+    btnEl.style.borderBottomColor = '#4f46e5';
+}
+</script>
+{% endblock %}

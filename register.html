@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Add Person{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Directory</p>
+        <h1>Add Student or Staff</h1>
+    </div>
+</header>
+
+<section class="panel form-panel">
+    <form method="POST" class="register-form">
+        <div class="form-row">
+            <div>
+                <label>Type</label>
+                <select name="person_type" required>
+                    <option value="Student">Student</option>
+                    <option value="Staff">Staff</option>
+                </select>
+            </div>
+            <div>
+                <label>Full Name</label>
+                <input type="text" name="name" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>ID Number</label>
+                <input type="text" name="id_number" required>
+            </div>
+            <div>
+                <label>Department</label>
+                <input type="text" name="department">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Email</label>
+                <input type="email" name="email">
+            </div>
+            <div>
+                <label>Phone</label>
+                <input type="text" name="phone">
+            </div>
+        </div>
+
+        <div class="form-row single">
+            <div>
+                <label>Registration Password</label>
+                <input type="password" name="register_password" required>
+                <p class="field-hint">Required to add a new person. Ask your admin if you don't have it.</p>
+            </div>
+        </div>
+
+        <p class="field-hint">After you submit, a camera window will open on this computer to capture the person's face. Look at the camera and slowly turn your head left and right until it finishes (or press 'q' to stop early).</p>
+
+        <button type="submit" class="primary-btn">Add &amp; Start Face Capture</button>
+    </form>
+</section>
+{% endblock %}

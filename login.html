@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — Campus Presence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="brand">
+            <span class="brand-mark">◐</span>
+            <span class="brand-name">Campus<br>Presence</span>
+        </div>
+        <p class="login-tagline">Face-based attendance for students and staff.</p>
+        {% if error %}
+        <div class="error-box">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <label>Username</label>
+            <input type="text" name="username" autocomplete="username" required>
+            <label>Password</label>
+            <input type="password" name="password" autocomplete="current-password" required>
+            <button type="submit">Sign in</button>
+        </form>
+        <p class="hint">Default prototype login: admin / admin123</p>
+    </div>
+</body>
+</html>

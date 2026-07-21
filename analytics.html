@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}AI Analytics{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Statistics</p>
+        <h1>AI Analytics &amp; Predictions</h1>
+    </div>
+</header>
+
+<!-- AI Prediction Banner Card -->
+<section class="panel predictor-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%); color: white; border: none; position: relative; overflow: hidden; padding: 24px; border-radius: 16px;">
+    <div style="position: relative; z-index: 2;">
+        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #a78bfa; font-weight: bold; font-family: 'Space Grotesk', sans-serif;">AI Predictive Forecast</span>
+        <h2 style="font-size: 20px; margin-top: 4px; margin-bottom: 8px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; color: white;">Expected Attendance Rate for Tomorrow</h2>
+        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 48px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; color: #c084fc;">{{ predicted_rate }}%</span>
+            <span style="font-size: 14px; color: #cbd5e1;">predicted presence rate</span>
+        </div>
+        <p style="font-size: 13px; color: #94a3b8; margin: 0; font-style: italic;">✦ {{ forecast_status }}</p>
+    </div>
+    <div style="position: absolute; right: -20px; bottom: -20px; font-size: 160px; color: rgba(167, 139, 250, 0.04); user-select: none; font-weight: bold; pointer-events: none;">📈</div>
+</section>
+
+<!-- Main Analytics Grid -->
+<div class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+    
+    <!-- 30-Day Trend Chart -->
+    <div class="panel chart-card" style="padding: 20px; background: white; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06);">
+        <h3 style="margin-top:0; margin-bottom:16px; font-size: 16px; font-family: 'Space Grotesk', sans-serif; color: #0f172a;">Attendance Trend (Past 30 Days)</h3>
+        <div style="height: 260px; position: relative;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Busiest Arrival Hours -->
+    <div class="panel chart-card" style="padding: 20px; background: white; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06);">
+        <h3 style="margin-top:0; margin-bottom:16px; font-size: 16px; font-family: 'Space Grotesk', sans-serif; color: #0f172a;">Busiest Arrival Hours</h3>
+        <div style="height: 260px; position: relative;">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Late Arrivals after 9:30 AM -->
+    <div class="panel chart-card" style="padding: 20px; background: white; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); grid-column: span 1;">
+        <h3 style="margin-top:0; margin-bottom:16px; font-size: 16px; font-family: 'Space Grotesk', sans-serif; color: #0f172a;">Late Arrivals after 09:30 AM</h3>
+        <div style="height: 260px; position: relative;">
+            <canvas id="lateChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Shared chart fonts config
+    const fontConfig = {
+        family: "'Inter', sans-serif",
+        size: 11
+    };
+
+    // 1. Trend Chart (Line Chart)
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendLabels = {{ trend_labels|tojson }};
+    const trendRates = {{ trend_rates|tojson }};
+    
+    // Fallback if no data
+    const finalTrendLabels = trendLabels.length > 0 ? trendLabels : ["No Data"];
+    const finalTrendRates = trendRates.length > 0 ? trendRates : [0];
+
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: finalTrendLabels,
+            datasets: [{
+                label: 'Presence Rate %',
+                data: finalTrendRates,
+                borderColor: '#4f46e5',
+                borderWidth: 3,
+                tension: 0.35,
+                fill: true,
+                backgroundColor: function(context) {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return null;
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.25)');
+                    gradient.addColorStop(1, 'rgba(79, 70, 229, 0.00)');
+                    return gradient;
+                },
+                pointBackgroundColor: '#4f46e5',
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: { font: fontConfig, callback: value => value + '%' },
+                    grid: { color: 'rgba(0,0,0,0.03)' }
+                },
+                x: {
+                    ticks: { font: fontConfig },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // 2. Hourly Chart (Bar Chart)
+    const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+    const hourlyLabels = {{ hourly_labels|tojson }};
+    const hourlyData = {{ hourly_data|tojson }};
+    
+    const finalHourlyLabels = hourlyLabels.length > 0 ? hourlyLabels : ["No Entries"];
+    const finalHourlyData = hourlyData.length > 0 ? hourlyData : [0];
+
+    new Chart(hourlyCtx, {
+        type: 'bar',
+        data: {
+            labels: finalHourlyLabels,
+            datasets: [{
+                label: 'Check-ins',
+                data: finalHourlyData,
+                backgroundColor: '#a78bfa',
+                borderRadius: 6,
+                barThickness: 16
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { font: fontConfig, precision: 0 },
+                    grid: { color: 'rgba(0,0,0,0.03)' }
+                },
+                x: {
+                    ticks: { font: fontConfig },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // 3. Late Arrivals Chart (Horizontal Bar Chart)
+    const lateCtx = document.getElementById('lateChart').getContext('2d');
+    const lateLabels = {{ late_labels|tojson }};
+    const lateData = {{ late_data|tojson }};
+    
+    const finalLateLabels = lateLabels.length > 0 ? lateLabels : ["No Latecomers"];
+    const finalLateData = lateData.length > 0 ? lateData : [0];
+
+    new Chart(lateCtx, {
+        type: 'bar',
+        data: {
+            labels: finalLateLabels,
+            datasets: [{
+                label: 'Late Count',
+                data: finalLateData,
+                backgroundColor: '#ef4444',
+                borderRadius: 6,
+                barThickness: 16
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y', // Makes it horizontal
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { font: fontConfig, precision: 0 },
+                    grid: { color: 'rgba(0,0,0,0.03)' }
+                },
+                y: {
+                    ticks: { font: fontConfig },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

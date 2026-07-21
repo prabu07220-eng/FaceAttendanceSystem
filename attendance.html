@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Attendance Log{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Records</p>
+        <h1>Attendance Log</h1>
+    </div>
+    <a href="{{ url_for('download_attendance') }}" class="primary-btn">Download Excel</a>
+</header>
+
+<section class="panel">
+    <table class="data-table">
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Type</th><th>Department</th><th>Status</th><th>Entry Time</th><th>Exit Time</th></tr>
+        </thead>
+        <tbody>
+            {% for id_number, name, person_type, department, entry_time, exit_time in rows %}
+            <tr>
+                <td>{{ id_number }}</td>
+                <td>{{ name }}</td>
+                <td><span class="badge {{ 'student' if person_type=='Student' else 'staff' }}">{{ person_type }}</span></td>
+                <td>{{ department or "—" }}</td>
+                <td><span class="badge present">Present</span></td>
+                <td>{{ entry_time.strftime("%d %b %Y, %I:%M %p") if entry_time else "—" }}</td>
+                <td>{{ exit_time.strftime("%d %b %Y, %I:%M %p") if exit_time else "—" }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">No attendance recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

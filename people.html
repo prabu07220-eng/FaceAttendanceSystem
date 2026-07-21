@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Students & Staff{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Directory</p>
+        <h1>Students &amp; Staff</h1>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('retrain') }}" class="secondary-btn">Retrain Model</a>
+        <a href="{{ url_for('register') }}" class="primary-btn">+ Add Person</a>
+    </div>
+</header>
+
+<form class="filter-bar" method="GET">
+    <select name="type" onchange="this.form.submit()">
+        <option value="">All types</option>
+        <option value="Student" {{ 'selected' if type_filter=='Student' }}>Student</option>
+        <option value="Staff" {{ 'selected' if type_filter=='Staff' }}>Staff</option>
+    </select>
+    <select name="department" onchange="this.form.submit()">
+        <option value="">All departments</option>
+        {% for d in departments %}
+        <option value="{{ d }}" {{ 'selected' if dept_filter==d }}>{{ d }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<section class="panel">
+    <table class="data-table">
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Type</th><th>Department</th><th>Email</th><th>Phone</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for id, name, person_type, id_number, department, email, phone in rows %}
+            <tr>
+                <td>{{ id_number }}</td>
+                <td>{{ name }}</td>
+                <td><span class="badge {{ 'student' if person_type=='Student' else 'staff' }}">{{ person_type }}</span></td>
+                <td>{{ department or "—" }}</td>
+                <td>{{ email or "—" }}</td>
+                <td>{{ phone or "—" }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_person', person_id=id) }}"
+                          onsubmit="return confirm('Delete {{ name }}? This removes their database record, attendance history, and face photos permanently.');">
+                        <button type="submit" class="delete-btn">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">No one matches this filter yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
