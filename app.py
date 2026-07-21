@@ -27,11 +27,19 @@ import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 app.jinja_loader = jinja2.ChoiceLoader([
     jinja2.FileSystemLoader(os.path.join(BASE_DIR, 'templates')),
     jinja2.FileSystemLoader(BASE_DIR)
 ])
+
+@app.route('/style.css')
+def serve_style_css():
+    from flask import send_from_directory
+    for folder in [os.path.join(BASE_DIR, 'static'), BASE_DIR]:
+        if os.path.exists(os.path.join(folder, 'style.css')):
+            return send_from_directory(folder, 'style.css', mimetype='text/css')
+    return "", 404
 
 @app.route('/static/<path:filename>')
 def custom_static(filename):
