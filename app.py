@@ -480,29 +480,34 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    conn = get_db()
-    cursor = conn.cursor()
+    student_count, staff_count, present_today, alerts_today = 0, 0, 0, 0
+    recent = []
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM staff WHERE person_type='Student'")
-    student_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM staff WHERE person_type='Student'")
+        student_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM staff WHERE person_type='Staff'")
-    staff_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM staff WHERE person_type='Staff'")
+        staff_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(DISTINCT staff_id) FROM attendance WHERE DATE(entry_time)=%s", (datetime.date.today(),))
-    present_today = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(DISTINCT staff_id) FROM attendance WHERE DATE(entry_time)=%s", (datetime.date.today(),))
+        present_today = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM unknown_alerts WHERE DATE(detected_time)=%s", (datetime.date.today(),))
-    alerts_today = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM unknown_alerts WHERE DATE(detected_time)=%s", (datetime.date.today(),))
+        alerts_today = cursor.fetchone()[0]
 
-    cursor.execute("""
-        SELECT s.name, s.person_type, s.department, a.entry_time
-        FROM attendance a JOIN staff s ON a.staff_id = s.id
-        ORDER BY a.entry_time DESC LIMIT 8
-    """)
-    recent = cursor.fetchall()
+        cursor.execute("""
+            SELECT s.name, s.person_type, s.department, a.entry_time
+            FROM attendance a JOIN staff s ON a.staff_id = s.id
+            ORDER BY a.entry_time DESC LIMIT 8
+        """)
+        recent = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"Notice: dashboard DB fallback: {e}")
 
-    conn.close()
     return render_template(
         "dashboard.html",
         student_count=student_count,
@@ -516,29 +521,33 @@ def dashboard():
 @app.route("/people")
 @login_required
 def people():
-    conn = get_db()
-    cursor = conn.cursor()
-
+    rows, departments = [], []
     dept_filter = request.args.get("department", "")
     type_filter = request.args.get("type", "")
 
-    query = "SELECT id, name, person_type, id_number, department, email, phone FROM staff WHERE 1=1"
-    params = []
-    if dept_filter:
-        query += " AND department = %s"
-        params.append(dept_filter)
-    if type_filter:
-        query += " AND person_type = %s"
-        params.append(type_filter)
-    query += " ORDER BY name"
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
+        query = "SELECT id, name, person_type, id_number, department, email, phone FROM staff WHERE 1=1"
+        params = []
+        if dept_filter:
+            query += " AND department = %s"
+            params.append(dept_filter)
+        if type_filter:
+            query += " AND person_type = %s"
+            params.append(type_filter)
+        query += " ORDER BY name"
 
-    cursor.execute("SELECT DISTINCT department FROM staff WHERE department IS NOT NULL AND department <> ''")
-    departments = [r[0] for r in cursor.fetchall()]
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
 
-    conn.close()
+        cursor.execute("SELECT DISTINCT department FROM staff WHERE department IS NOT NULL AND department <> ''")
+        departments = [r[0] for r in cursor.fetchall()]
+        conn.close()
+    except Exception as e:
+        print(f"Notice: people DB fallback: {e}")
+
     return render_template("people.html", rows=rows, departments=departments,
                             dept_filter=dept_filter, type_filter=type_filter)
 
@@ -546,40 +555,47 @@ def people():
 @app.route("/attendance")
 @login_required
 def attendance():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT s.id_number, s.name, s.person_type, s.department, a.entry_time, a.exit_time
-        FROM attendance a JOIN staff s ON a.staff_id = s.id
-        ORDER BY a.entry_time DESC
-    """)
-    rows = cursor.fetchall()
-    conn.close()
+    rows = []
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT s.id_number, s.name, s.person_type, s.department, a.entry_time, a.exit_time
+            FROM attendance a JOIN staff s ON a.staff_id = s.id
+            ORDER BY a.entry_time DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"Notice: attendance DB fallback: {e}")
+
     return render_template("attendance.html", rows=rows)
 
 
 @app.route("/attendance/download")
 @login_required
 def download_attendance():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT s.id_number, s.name, s.person_type, s.department, a.entry_time, a.exit_time
-        FROM attendance a JOIN staff s ON a.staff_id = s.id
-        ORDER BY a.entry_time DESC
-    """)
-    rows = cursor.fetchall()
-    conn.close()
+    rows = []
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT s.id_number, s.name, s.person_type, s.department, a.entry_time, a.exit_time
+            FROM attendance a JOIN staff s ON a.staff_id = s.id
+            ORDER BY a.entry_time DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"Notice: download DB fallback: {e}")
 
     wb = openpyxl.Workbook()
     headers = ["ID Number", "Name", "Type", "Department", "Status", "Entry Time", "Exit Time"]
 
-    # 1. Students Sheet
     ws_students = wb.active
     ws_students.title = "Students"
     ws_students.append(headers)
 
-    # 2. Staff Sheet
     ws_staff = wb.create_sheet(title="Staff")
     ws_staff.append(headers)
 
@@ -594,12 +610,10 @@ def download_attendance():
         else:
             ws_staff.append(record)
 
-    # Auto-adjust column widths for Students
     for col_cells in ws_students.columns:
         max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col_cells)
         ws_students.column_dimensions[col_cells[0].column_letter].width = max_len + 3
 
-    # Auto-adjust column widths for Staff
     for col_cells in ws_staff.columns:
         max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col_cells)
         ws_staff.column_dimensions[col_cells[0].column_letter].width = max_len + 3
@@ -618,46 +632,57 @@ def download_attendance():
 @app.route("/alerts")
 @login_required
 def alerts():
-    conn = get_db()
-    cursor = conn.cursor()
-    # Fetch unknown visitor alerts
-    cursor.execute("SELECT id, detected_time, image_path FROM unknown_alerts ORDER BY detected_time DESC")
-    unknown_rows = cursor.fetchall()
-    # Fetch spoofing alerts
-    cursor.execute("SELECT id, detected_time, image_path FROM spoof_alerts ORDER BY detected_time DESC")
-    spoof_rows = cursor.fetchall()
-    conn.close()
+    unknown_rows, spoof_rows = [], []
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, detected_time, image_path FROM unknown_alerts ORDER BY detected_time DESC")
+        unknown_rows = cursor.fetchall()
+        cursor.execute("SELECT id, detected_time, image_path FROM spoof_alerts ORDER BY detected_time DESC")
+        spoof_rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"Notice: alerts DB fallback: {e}")
+
     return render_template("alerts.html", active="alerts", unknown_rows=unknown_rows, spoof_rows=spoof_rows)
 
 
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    if request.method == "POST":
-        provider = request.form.get("llm_provider", "gemini").strip()
-        api_key = request.form.get("gemini_api_key", "").strip()
-        model_name = request.form.get("ollama_model", "qwen2.5-coder:1.5b").strip()
-        chat_enabled = request.form.get("ai_chat_enabled", "true").strip()
+    llm_provider = "gemini"
+    gemini_api_key = ""
+    ollama_model = "qwen2.5-coder:1.5b"
+    ai_chat_enabled = "true"
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
         
-        cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('llm_provider', %s) ON DUPLICATE KEY UPDATE `value` = %s", (provider, provider))
-        cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('gemini_api_key', %s) ON DUPLICATE KEY UPDATE `value` = %s", (api_key, api_key))
-        cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('ollama_model', %s) ON DUPLICATE KEY UPDATE `value` = %s", (model_name, model_name))
-        cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('ai_chat_enabled', %s) ON DUPLICATE KEY UPDATE `value` = %s", (chat_enabled, chat_enabled))
-        conn.commit()
-        flash("Settings saved successfully.", "success")
+        if request.method == "POST":
+            provider = request.form.get("llm_provider", "gemini").strip()
+            api_key = request.form.get("gemini_api_key", "").strip()
+            model_name = request.form.get("ollama_model", "qwen2.5-coder:1.5b").strip()
+            chat_enabled = request.form.get("ai_chat_enabled", "true").strip()
+            
+            cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('llm_provider', %s) ON DUPLICATE KEY UPDATE `value` = %s", (provider, provider))
+            cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('gemini_api_key', %s) ON DUPLICATE KEY UPDATE `value` = %s", (api_key, api_key))
+            cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('ollama_model', %s) ON DUPLICATE KEY UPDATE `value` = %s", (model_name, model_name))
+            cursor.execute("INSERT INTO settings (`key`, `value`) VALUES ('ai_chat_enabled', %s) ON DUPLICATE KEY UPDATE `value` = %s", (chat_enabled, chat_enabled))
+            conn.commit()
+            flash("Settings saved successfully.", "success")
+            
+        cursor.execute("SELECT `key`, `value` FROM settings")
+        settings_dict = {row[0]: row[1] for row in cursor.fetchall()}
         
-    cursor.execute("SELECT `key`, `value` FROM settings")
-    settings_dict = {row[0]: row[1] for row in cursor.fetchall()}
-    
-    llm_provider = settings_dict.get("llm_provider", "gemini")
-    gemini_api_key = settings_dict.get("gemini_api_key", "")
-    ollama_model = settings_dict.get("ollama_model", "qwen2.5-coder:1.5b")
-    ai_chat_enabled = settings_dict.get("ai_chat_enabled", "true")
-    
-    conn.close()
+        llm_provider = settings_dict.get("llm_provider", "gemini")
+        gemini_api_key = settings_dict.get("gemini_api_key", "")
+        ollama_model = settings_dict.get("ollama_model", "qwen2.5-coder:1.5b")
+        ai_chat_enabled = settings_dict.get("ai_chat_enabled", "true")
+        conn.close()
+    except Exception as e:
+        print(f"Notice: settings DB fallback: {e}")
+
     return render_template(
         "settings.html",
         active="settings",
@@ -831,94 +856,92 @@ def api_chat():
 @app.route("/analytics")
 @login_required
 def analytics():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # 1. Total Registered
-    cursor.execute("SELECT COUNT(*) FROM staff")
-    total_registered = cursor.fetchone()[0] or 1 # Avoid division by zero
-    
-    # 2. Busiest Hours (Hourly Arrivals)
-    cursor.execute("""
-        SELECT HOUR(entry_time) as hr, COUNT(*) as cnt 
-        FROM attendance 
-        GROUP BY HOUR(entry_time) 
-        ORDER BY hr
-    """)
-    hourly_rows = cursor.fetchall()
-    hourly_labels = []
-    hourly_data = []
-    for hr, cnt in hourly_rows:
-        ampm = "AM" if hr < 12 else "PM"
-        display_hr = hr if hr <= 12 else hr - 12
-        if display_hr == 0:
-            display_hr = 12
-        hourly_labels.append(f"{display_hr:02d}:00 {ampm}")
-        hourly_data.append(cnt)
-        
-    # 3. Late Arrivals after 9:30 AM by Department
-    cursor.execute("""
-        SELECT COALESCE(s.department, 'No Dept') as dept, COUNT(*) as cnt 
-        FROM attendance a 
-        JOIN staff s ON a.staff_id = s.id 
-        WHERE TIME(a.entry_time) > '09:30:00' 
-        GROUP BY s.department
-    """)
-    late_rows = cursor.fetchall()
-    late_labels = [row[0] for row in late_rows]
-    late_data = [row[1] for row in late_rows]
-    
-    # 4. Attendance Trends (Past 30 Days)
-    cursor.execute("""
-        SELECT DATE(entry_time) as dt, COUNT(DISTINCT staff_id) as cnt 
-        FROM attendance 
-        WHERE entry_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-        GROUP BY DATE(entry_time) 
-        ORDER BY dt
-    """)
-    trend_rows = cursor.fetchall()
-    trend_labels = []
-    trend_rates = []
-    for dt, cnt in trend_rows:
-        date_str = dt.strftime("%b %d")
-        rate = round((cnt / total_registered) * 100, 1)
-        trend_labels.append(date_str)
-        trend_rates.append(rate)
-        
-    # 5. AI Attendance Predictor (Weighted Moving Average)
-    cursor.execute("""
-        SELECT DATE(entry_time) as dt, COUNT(DISTINCT staff_id) as cnt 
-        FROM attendance 
-        GROUP BY DATE(entry_time) 
-        ORDER BY dt DESC 
-        LIMIT 14
-    """)
-    predictor_rows = cursor.fetchall()
-    predictor_rows.reverse()
-    
+    hourly_labels, hourly_data = [], []
+    late_labels, late_data = [], []
+    trend_labels, trend_rates = [], []
     predicted_rate = 0.0
-    forecast_status = "Insufficient data"
-    
-    if len(predictor_rows) >= 3:
-        rates = [round((cnt / total_registered) * 100, 1) for dt, cnt in predictor_rows]
-        weighted_sum = 0.0
-        weight_total = 0.0
-        for idx, rate in enumerate(rates):
-            weight = idx + 1
-            weighted_sum += rate * weight
-            weight_total += weight
-        predicted_rate = round(weighted_sum / weight_total, 1)
-        forecast_status = f"Based on last {len(rates)} days of attendance logs."
-    elif len(predictor_rows) > 0:
-        rates = [round((cnt / total_registered) * 100, 1) for dt, cnt in predictor_rows]
-        predicted_rate = round(sum(rates) / len(rates), 1)
-        forecast_status = "Based on limited attendance history."
-    else:
-        predicted_rate = 0.0
-        forecast_status = "No attendance logs found yet. Register people and log entry to calculate."
+    forecast_status = "No attendance logs found yet. Register people and log entry to calculate."
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
         
-    conn.close()
-    
+        # 1. Total Registered
+        cursor.execute("SELECT COUNT(*) FROM staff")
+        total_registered = cursor.fetchone()[0] or 1 # Avoid division by zero
+        
+        # 2. Busiest Hours (Hourly Arrivals)
+        cursor.execute("""
+            SELECT HOUR(entry_time) as hr, COUNT(*) as cnt 
+            FROM attendance 
+            GROUP BY HOUR(entry_time) 
+            ORDER BY hr
+        """)
+        hourly_rows = cursor.fetchall()
+        for hr, cnt in hourly_rows:
+            ampm = "AM" if hr < 12 else "PM"
+            display_hr = hr if hr <= 12 else hr - 12
+            if display_hr == 0:
+                display_hr = 12
+            hourly_labels.append(f"{display_hr:02d}:00 {ampm}")
+            hourly_data.append(cnt)
+            
+        # 3. Late Arrivals after 9:30 AM by Department
+        cursor.execute("""
+            SELECT COALESCE(s.department, 'No Dept') as dept, COUNT(*) as cnt 
+            FROM attendance a 
+            JOIN staff s ON a.staff_id = s.id 
+            WHERE TIME(a.entry_time) > '09:30:00' 
+            GROUP BY s.department
+        """)
+        late_rows = cursor.fetchall()
+        late_labels = [row[0] for row in late_rows]
+        late_data = [row[1] for row in late_rows]
+        
+        # 4. Attendance Trends (Past 30 Days)
+        cursor.execute("""
+            SELECT DATE(entry_time) as dt, COUNT(DISTINCT staff_id) as cnt 
+            FROM attendance 
+            WHERE entry_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+            GROUP BY DATE(entry_time) 
+            ORDER BY dt
+        """)
+        trend_rows = cursor.fetchall()
+        for dt, cnt in trend_rows:
+            date_str = dt.strftime("%b %d")
+            rate = round((cnt / total_registered) * 100, 1)
+            trend_labels.append(date_str)
+            trend_rates.append(rate)
+            
+        # 5. AI Attendance Predictor (Weighted Moving Average)
+        cursor.execute("""
+            SELECT DATE(entry_time) as dt, COUNT(DISTINCT staff_id) as cnt 
+            FROM attendance 
+            GROUP BY DATE(entry_time) 
+            ORDER BY dt DESC 
+            LIMIT 14
+        """)
+        predictor_rows = cursor.fetchall()
+        predictor_rows.reverse()
+        
+        if len(predictor_rows) >= 3:
+            rates = [round((cnt / total_registered) * 100, 1) for dt, cnt in predictor_rows]
+            weighted_sum = 0.0
+            weight_total = 0.0
+            for idx, rate in enumerate(rates):
+                weight = idx + 1
+                weighted_sum += rate * weight
+                weight_total += weight
+            predicted_rate = round(weighted_sum / weight_total, 1)
+            forecast_status = f"Based on last {len(rates)} days of attendance logs."
+        elif len(predictor_rows) > 0:
+            rates = [round((cnt / total_registered) * 100, 1) for dt, cnt in predictor_rows]
+            predicted_rate = round(sum(rates) / len(rates), 1)
+            forecast_status = "Based on limited attendance history."
+        conn.close()
+    except Exception as e:
+        print(f"Notice: analytics DB fallback: {e}")
+        
     return render_template(
         "analytics.html",
         active="analytics",
