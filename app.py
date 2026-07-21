@@ -4,12 +4,22 @@ import datetime
 import openpyxl
 import io
 import os
-import cv2
+try:
+    import cv2
+except Exception as _cv_err:
+    print(f"Notice: Running in headless web mode without OpenCV GUI: {_cv_err}")
+    cv2 = None
+
 import hashlib
 import secrets
-
 import subprocess
-import face_utils
+
+try:
+    import face_utils
+except Exception as _fu_err:
+    print(f"Notice: face_utils import fallback: {_fu_err}")
+    face_utils = None
+
 import numpy as np
 import config
 
@@ -156,8 +166,9 @@ def register():
 
 
 def capture_face_images(person_id, name):
-    """Opens the webcam and captures face images for a newly registered person.
-    Runs the same detection logic as capture_faces.py (frontal + left/right profile)."""
+    """Opens the webcam and captures face images for a newly registered person."""
+    if cv2 is None or face_utils is None:
+        return 0
     face_dir = os.path.join(DATASET_DIR, f"{person_id}_{name}")
     os.makedirs(face_dir, exist_ok=True)
 
