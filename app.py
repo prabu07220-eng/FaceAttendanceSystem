@@ -602,6 +602,12 @@ def download_attendance():
         else:
             ws_staff.append(record)
 
+    # Enable native Excel filter dropdowns for both sheets
+    if ws_students.max_row > 0:
+        ws_students.auto_filter.ref = f"A1:G{ws_students.max_row}"
+    if ws_staff.max_row > 0:
+        ws_staff.auto_filter.ref = f"A1:G{ws_staff.max_row}"
+
     for col_cells in ws_students.columns:
         max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col_cells)
         ws_students.column_dimensions[col_cells[0].column_letter].width = max_len + 3
